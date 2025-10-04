@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>All Recipes</h2>
+  <a href="{{ url_for('add_recipe') }}">➕ Add New Recipe</a>
+  <ul>
+    {% for recipe in recipes %}
+      <li>
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a>
+        {% if recipe.user_id == current_user.id %}
+          | <a href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}">Edit</a>
+          <form action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}" method="POST" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

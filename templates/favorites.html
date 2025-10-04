@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>My Favorite Recipes</h2>
+{% if favorites %}
+  <ul>
+    {% for fav in favorites %}
+      <li>
+        <a href="{{ url_for('recipe_detail', recipe_id=fav.recipe.id) }}">
+          {{ fav.recipe.title }}
+        </a>
+        <form method="post" action="{{ url_for('favorite_recipe', recipe_id=fav.recipe.id) }}">
+          <button type="submit">Remove from Favorites</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>You have no favorite recipes yet.</p>
+{% endif %}
+{% endblock %}

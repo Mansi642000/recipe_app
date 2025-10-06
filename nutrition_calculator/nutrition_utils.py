@@ -4,7 +4,7 @@ import difflib
 # Load and clean dataset
 df = pd.read_csv("./dataset/indb.csv")
 
-# Drop any empty or unnamed columns (common in CSVs)
+# Drop any empty or unnamed columns
 df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
 # Rename to standardized columns (only if they exist)
@@ -32,9 +32,6 @@ if "food_name" in df.columns:
 else:
     raise ValueError("❌ 'food_name' column missing in dataset")
 
-# Define known nutrient columns dynamically
-nutrient_cols = [col for col in df.columns if col not in ["food_name"]]
-
 # Common plural to singular corrections
 plural_map = {
     "tomatoes": "tomato",
@@ -45,20 +42,42 @@ plural_map = {
     "apples": "apple",
 }
 
-# === Functions ===
+# Major nutrients we care about
+major_nutrients = ['calories', 'proteins', 'fats', 'carbs', 'fibers']
+
 def get_nutrition(food_query):
+    # Normalize the query
     food_query = food_query.strip().lower()
     food_query = plural_map.get(food_query, food_query)
-    matches = difflib.get_close_matches(food_query, df['food_name'], n=1, cutoff=0.6)
-    if matches:
-        row = df.loc[df['food_name'] == matches[0]].iloc[0]
-        return {col: float(row[col]) if pd.notnull(row[col]) else 0.0 for col in nutrient_cols}
-    return {col: 0.0 for col in nutrient_cols}
+
+    # Fuzzy match to find closest food name
+    food_names = df['food_name'].str.lower()
+    matches = difflib.get_close_matches(food_query, food_names, n=1, cutoff=0.6)
+
+    if not matches:
+        # No match found
+        return {k: 0.0 for k in major_nutrients}
+
+    # Get the first matching row
+    row = df[food_names == matches[0]].iloc[0]
+
+    nutrition = {}
+    for col in major_nutrients:
+        try:
+            value = row[col]
+            if isinstance(value, pd.Series):
+                value = value.iloc[0]
+            nutrition[col] = float(value) if pd.notnull(value) else 0.0
+        except Exception:
+            nutrition[col] = 0.0
+
+    return nutrition
 
 def calculate_recipe_nutrition(ingredients_list):
-    totals = {col: 0.0 for col in nutrient_cols}
+    # Only sum major nutrients
+    totals = {k: 0.0 for k in major_nutrients}
     for ing in ingredients_list:
         nutrition = get_nutrition(ing)
-        for key in totals.keys():
-            totals[key] += nutrition.get(key, 0.0)
+        for k in major_nutrients:
+            totals[k] += nutrition.get(k, 0.0)
     return totals

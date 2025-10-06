@@ -1,0 +1,78 @@
+/* Custom styles for Recipe App */
+body {
+  background-color: #f7f8fb;
+  color: #333;
+}
+.navbar-brand { font-weight: 700; }
+.card-recipe {
+  max-width: 220px; /* compact cards like earlier */
+  border-radius: 8px;
+}
+.card-recipe img {
+  height: 130px; /* uniform thumbnail height */
+  object-fit: cover;
+}
+.card { border-radius:10px; }
+.card-recipe .card-body { padding: 6px; }
+.card-recipe .card-footer { padding: 6px; }
+.recipe-title { font-size:0.98rem; font-weight:600; margin-bottom:4px; }
+.card-recipe .text-muted.small { font-size:0.76rem; }
+.card-recipe .badge { font-size:0.78rem; padding:0.25rem 0.4rem; }
+.badge-muted { background:#e9ecef; color:#333; }
+.footer { margin-top:40px; padding:20px 0; text-align:center; color:#777; }
+.container-small { max-width:1100px; margin:0 auto; }
+/* Make images responsive */
+.img-fluid { max-width:100%; height:auto; }
+
+/* Page backgrounds */
+.hero { background-repeat:no-repeat; background-size:cover; background-position:center; padding:30px 0; }
+.hero--home { background-image: url('/images/bg1.jpg'); }
+.hero--dashboard { background-image: url('/images/bg2.jpg'); }
+.hero--auth { background-image: url('/images/lrbg.jpg'); }
+.hero--recipes { background-image: url('/images/allrbg.jpg'); }
+
+/* Overlay to improve readability */
+.hero .overlay { background: rgba(255,255,255,0.85); padding:20px; border-radius:8px; }
+
+/* Auth card helper */
+.auth-card { max-width:420px; margin:0 auto; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+.auth-card .card-body { padding:24px; }
+/* Custom styles for SyNutrify */
+:root{
+  --primary:#ff6b6b; /* warm coral */
+  --accent:#556ee6; /* blue accent */
+  --muted:#6c757d;
+  --card-bg:#ffffff;
+  --page-bg:#fcfdff;
+}
+body {
+  background-color: var(--page-bg);
+  color: #222;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+.navbar-brand { font-weight: 700; color: var(--accent) !important; }
+.card-recipe {
+  background: linear-gradient(180deg, #fff 0%, #fff 60%, #fff); 
+  box-shadow: 0 6px 18px rgba(85,110,230,0.06);
+}
+.card-recipe .badge { font-size:0.78rem; padding:0.25rem 0.4rem; }
+.badge-muted { background:#eef2ff; color:var(--muted); }
+.btn-outline-primary { border-color: var(--accent); color: var(--accent); }
+.btn-outline-primary:hover { background: var(--accent); color: white; }
+.btn-primary { background: var(--primary); border-color: var(--primary); }
+.footer { margin-top:40px; padding:18px 0; text-align:center; color:#fff; background: linear-gradient(90deg,var(--accent), var(--primary)); }
+.footer small { font-weight:600; }
+
+/* Additional hero and card tuning */
+.hero { position: relative; padding: 40px 0; }
+.hero .overlay { position: relative; z-index: 2; }
+.hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.6)); z-index:1; }
+.hero--home { background-image: url('/images/allrbg.jpg'); }
+.hero--dashboard { background-image: url('/images/bg1.jpg'); }
+.hero--auth { background-image: url('/images/lrbg.jpg'); }
+.hero--recipes { background-image: url('/images/bg2.jpg'); }
+
+.card-recipe { max-width: 260px; margin: 0 auto; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.card-recipe .card-title { font-size: 1rem; font-weight:600; }
+.card-recipe img { width:100%; height:auto; }
+.auth-card { max-width:420px; margin: 60px auto; padding: 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); background: #fff; }

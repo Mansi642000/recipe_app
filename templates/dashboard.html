@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-  <h2>Dashboard</h2>
-  <p>Hello, <strong>{{ current_user.username }}</strong> — you're logged in.</p>
+  <div class="hero hero--dashboard">
+    <div class="container overlay">
+      <h2>Dashboard</h2>
+      <p>Hello, <strong>{{ current_user.username }}</strong> — you're logged in.</p>
+    </div>
+  </div>
 {% endblock %}

@@ -1,10 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
-  <h2>Login</h2>
-  <form method="POST">
-    {{ form.hidden_tag() }}
-    <p>{{ form.username.label }}<br>{{ form.username(size=32) }}</p>
-    <p>{{ form.password.label }}<br>{{ form.password(size=32) }}</p>
-    <p>{{ form.submit() }}</p>
-  </form>
+  <div class="hero hero--auth d-flex align-items-center" style="min-height:60vh;">
+    <div class="container overlay d-flex align-items-center justify-content-center" style="min-height:60vh;">
+      <div class="card auth-card w-100">
+        <div class="card-body">
+          <h3 class="mb-3 text-center">Login</h3>
+          <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+              {{ form.username.label(class_='form-label') }}
+              {{ form.username(class_='form-control') }}
+            </div>
+            <div class="mb-3">
+              {{ form.password.label(class_='form-label') }}
+              {{ form.password(class_='form-control') }}
+            </div>
+            <div class="d-grid">
+              {{ form.submit(class_='btn btn-primary') }}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock %}

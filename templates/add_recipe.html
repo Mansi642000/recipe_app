@@ -2,7 +2,7 @@
 {% block content %}
   <h2>{% if edit %}Edit Recipe{% else %}Add Recipe{% endif %}</h2>
 
-  <form method="POST" id="recipe-form">
+  <form method="POST" id="recipe-form" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
 
     <p>
@@ -11,8 +11,14 @@
     </p>
 
     <p>
+      {{ form.image_file.label }}<br>
+      {{ form.image_file() }}
+    </p>
+
+    <p>
       {{ form.image_url.label }}<br>
-      {{ form.image_url(size=250) }}
+      {{ form.image_url(size=60) }}
+      <br><small>Or provide an external image URL (optional).</small>
     </p>
 
     <p>
@@ -119,7 +125,8 @@
 
         // put calories into the calories field so it gets saved when submitting
         if ('calories' in data && caloriesField) {
-          caloriesField.value = Math.round(Number(data.calories));
+          // store as two-decimal string so backend can parse/round consistently
+          caloriesField.value = Number(data.calories).toFixed(2);
         }
       } catch (err) {
         console.error(err);

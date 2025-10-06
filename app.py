@@ -5,16 +5,33 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
 from flask_bcrypt import Bcrypt
 from flask_wtf import FlaskForm
+from flask_wtf import CSRFProtect
+from flask import send_from_directory
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField, IntegerField
 from wtforms.validators import DataRequired, Length, EqualTo, NumberRange, ValidationError , URL ,Optional
-from nutrition_calculator.nutrition_utils import get_nutrition, calculate_recipe_nutrition
-
+from werkzeug.utils import secure_filename
+from uuid import uuid4
+from urllib.parse import urlencode
+import shutil
+# ...existing code... (removed FileField import since we use image URL instead)
 # --- App setup ---
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Serve images folder (project-level) at /images/
+@app.route('/images/<path:filename>')
+def project_image(filename):
+    return send_from_directory(os.path.join(basedir, 'images'), filename)
+
+# Upload configuration: store uploaded images under static/uploads
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
+csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
@@ -103,7 +120,10 @@ class RecipeForm(FlaskForm):
     title = StringField("Title", validators=[DataRequired()])
     ingredients = TextAreaField("Ingredients", validators=[DataRequired()])
     instructions = TextAreaField("Instructions", validators=[DataRequired()])
-    calories = IntegerField("Calories (optional)")
+    # allow decimal calories input (we store floats rounded to 2 decimals)
+    calories = StringField("Calories (optional)")
+    # Allow either an uploaded image or an image URL
+    image_file = FileField("Upload image", validators=[FileAllowed(['jpg','png','jpeg'], 'Images only!')])
     image_url = StringField("Image URL", validators=[Optional(), URL()])
     youtube_url = StringField("YouTube Link", validators=[Optional(), URL()])
     submit = SubmitField("Save")
@@ -174,7 +194,10 @@ def dashboard():
 @login_required
 def recipes():
     all_recipes = Recipe.query.all()
-    return render_template("recipes.html", recipes=all_recipes)
+    # provide small forms for rating and commenting so they can be used inline
+    rating_form = RatingForm()
+    comment_form = CommentForm()
+    return render_template("recipes.html", recipes=all_recipes, rating_form=rating_form, comment_form=comment_form)
 
 
 @app.route("/recipe/<int:recipe_id>")
@@ -193,25 +216,95 @@ def recipe_detail(recipe_id):
     )
 
 
+@app.route('/recipe/<int:recipe_id>/export')
+@login_required
+def export_recipe(recipe_id):
+    recipe = Recipe.query.get_or_404(recipe_id)
+    # try to use WeasyPrint if installed
+    # 1) try WeasyPrint
+    try:
+        from weasyprint import HTML
+        html = render_template('recipe_print.html', recipe=recipe)
+        pdf = HTML(string=html).write_pdf()
+        return (pdf, 200, {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': f'attachment; filename=recipe_{recipe.id}.pdf'
+        })
+    except Exception:
+        app.logger.info('WeasyPrint not available or failed, trying pdfkit/wkhtmltopdf...')
+
+    # 2) try pdfkit + wkhtmltopdf
+    try:
+        import pdfkit
+        html = render_template('recipe_print.html', recipe=recipe)
+        # Look for an explicit env var first, then try to find wkhtmltopdf on PATH
+        wk_path = os.getenv('WKHTMLTOPDF_PATH') or shutil.which('wkhtmltopdf')
+        if wk_path:
+            try:
+                config = pdfkit.configuration(wkhtmltopdf=wk_path)
+                pdf = pdfkit.from_string(html, False, configuration=config)
+            except Exception:
+                app.logger.exception('pdfkit failed using wkhtmltopdf at %s', wk_path)
+                # try without explicit configuration (let pdfkit try PATH)
+                pdf = pdfkit.from_string(html, False)
+        else:
+            # Let pdfkit try to find wkhtmltopdf on PATH; will raise if not found
+            pdf = pdfkit.from_string(html, False)
+        return (pdf, 200, {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': f'attachment; filename=recipe_{recipe.id}.pdf'
+        })
+    except Exception:
+        app.logger.info('pdfkit/wkhtmltopdf not available or failed; falling back to HTML')
+
+    # fallback: render print-friendly HTML and instruct user to print to PDF
+    flash('PDF export not available (weasyprint/wkhtmltopdf missing). Showing print-friendly page — use your browser Print -> Save as PDF.', 'warning')
+    return render_template('recipe_print.html', recipe=recipe)
+
+
 @app.route("/recipe/new", methods=["GET", "POST"])
 @login_required
 def add_recipe():
     form = RecipeForm()
     if form.validate_on_submit():
         ingredients_list = [i.strip() for i in form.ingredients.data.split(',')]
+        # import nutrition utils lazily to avoid heavy startup imports (pandas)
+        from nutrition_calculator.nutrition_utils import calculate_recipe_nutrition
         nutrition_totals = calculate_recipe_nutrition(ingredients_list)
+        # decide image path: prefer uploaded file, fall back to provided URL
+        image_path = None
+        if form.image_file.data:
+            f = form.image_file.data
+            # generate secure unique filename
+            filename = secure_filename(f.filename)
+            unique = f"{uuid4().hex}_{filename}"
+            dest = os.path.join(app.config['UPLOAD_FOLDER'], unique)
+            f.save(dest)
+            # save relative URL for templates
+            image_path = url_for('static', filename=f'uploads/{unique}')
+        elif form.image_url.data:
+            image_path = form.image_url.data
+
+        # If user manually entered calories, prefer that (parse to float)
+        manual_cal = None
+        if form.calories.data and str(form.calories.data).strip():
+            try:
+                manual_cal = float(str(form.calories.data).strip())
+            except Exception:
+                manual_cal = None
+
         recipe = Recipe(
             title=form.title.data,
             ingredients=form.ingredients.data,
             instructions=form.instructions.data,
-            image_url=form.image_url.data,
+            image_url=image_path,
             youtube_url=form.youtube_url.data,
             user_id=current_user.id,
-            calories=nutrition_totals.get("calories", 0),
-            proteins=nutrition_totals.get("proteins", 0),
-            fats=nutrition_totals.get("fats", 0),
-            carbs=nutrition_totals.get("carbs", 0),
-            fibers=nutrition_totals.get("fibers", 0)
+            calories=round(manual_cal, 2) if manual_cal is not None else round(nutrition_totals.get("calories", 0), 2),
+            proteins=round(nutrition_totals.get("proteins", 0), 2),
+            fats=round(nutrition_totals.get("fats", 0), 2),
+            carbs=round(nutrition_totals.get("carbs", 0), 2),
+            fibers=round(nutrition_totals.get("fibers", 0), 2)
         )
         db.session.add(recipe)
         db.session.commit()
@@ -221,10 +314,18 @@ def add_recipe():
 
 @app.route('/calculate_nutrition', methods=['POST'])
 def calculate_nutrition():
-    data = request.get_json()
-    ingredients = [i.strip() for i in data.get('ingredients', '').split(',') if i.strip()]
-    result = calculate_recipe_nutrition(ingredients)
-    return jsonify(result)
+    try:
+        data = request.get_json()
+        ingredients = [i.strip() for i in data.get('ingredients', '').split(',') if i.strip()]
+        from nutrition_calculator.nutrition_utils import calculate_recipe_nutrition
+        result = calculate_recipe_nutrition(ingredients)
+        return jsonify(result)
+    except Exception as e:
+        # Return the error message for debugging (temporary)
+        import traceback
+        tb = traceback.format_exc()
+        app.logger.error('calculate_nutrition error:\n' + tb)
+        return jsonify({'error': str(e), 'trace': tb}), 500
 
 @app.route("/recipe/<int:recipe_id>/edit", methods=["GET", "POST"])
 @login_required
@@ -238,19 +339,37 @@ def edit_recipe(recipe_id):
         recipe.title = form.title.data
         recipe.ingredients = form.ingredients.data
         recipe.instructions = form.instructions.data
-        recipe.image_url = form.image_url.data
+        # handle uploaded file or URL
+        if form.image_file.data:
+            f = form.image_file.data
+            filename = secure_filename(f.filename)
+            unique = f"{uuid4().hex}_{filename}"
+            dest = os.path.join(app.config['UPLOAD_FOLDER'], unique)
+            f.save(dest)
+            recipe.image_url = url_for('static', filename=f'uploads/{unique}')
+        elif form.image_url.data:
+            recipe.image_url = form.image_url.data
         recipe.youtube_url = form.youtube_url.data
         ingredients_list = [i.strip() for i in form.ingredients.data.split(',')]
+        from nutrition_calculator.nutrition_utils import calculate_recipe_nutrition
         nutrition_totals = calculate_recipe_nutrition(ingredients_list)
-        recipe.calories = nutrition_totals.get("calories", 0)
-        recipe.proteins = nutrition_totals.get("proteins", 0)
-        recipe.fats = nutrition_totals.get("fats", 0)
-        recipe.carbs = nutrition_totals.get("carbs", 0)
-        recipe.fibers = nutrition_totals.get("fibers", 0)
+        # If user provided a manual calories override, use it
+        if form.calories.data and str(form.calories.data).strip():
+            try:
+                recipe.calories = round(float(str(form.calories.data).strip()), 2)
+            except Exception:
+                recipe.calories = round(nutrition_totals.get("calories", 0), 2)
+        else:
+            recipe.calories = round(nutrition_totals.get("calories", 0), 2)
+    recipe.proteins = round(nutrition_totals.get("proteins", 0), 2)
+    recipe.fats = round(nutrition_totals.get("fats", 0), 2)
+    recipe.carbs = round(nutrition_totals.get("carbs", 0), 2)
+    recipe.fibers = round(nutrition_totals.get("fibers", 0), 2)
 
-        db.session.commit()
-        flash("Recipe updated with new nutrition info!", "success")
-        return redirect(url_for("recipe_detail", recipe_id=recipe.id))
+    db.session.commit()
+    flash("Recipe updated with new nutrition info!", "success")
+    return redirect(url_for("recipe_detail", recipe_id=recipe.id))
+
     return render_template("add_recipe.html", form=form, edit=True)
 
 
@@ -315,9 +434,64 @@ def nutrition_lookup():
     matched = None
     if request.method == "POST":
         ingredients_list = [i.strip() for i in request.form['ingredients'].split(',')]
+        from nutrition_calculator.nutrition_utils import calculate_recipe_nutrition
         totals = calculate_recipe_nutrition(ingredients_list)
         matched = ingredients_list
     return render_template("nutrition_lookup.html", totals=totals, matched=matched)
+
+
+@app.route('/__debug_calc')
+def debug_calc():
+    # debug-only endpoint: call nutrition util directly with querystring
+    q = request.args.get('ingredients', '')
+    try:
+        from nutrition_calculator.nutrition_utils import calculate_recipe_nutrition
+        ing = [i.strip() for i in q.split(',') if i.strip()]
+        res = calculate_recipe_nutrition(ing)
+        return jsonify(res)
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        app.logger.error('debug_calc error:\n' + tb)
+        return jsonify({'error': str(e), 'trace': tb}), 500
+
+
+def normalize_text(s):
+    return (s or '').strip().lower()
+
+
+@app.route('/search')
+def search():
+    q = request.args.get('q', '').strip()
+    ingredients = request.args.get('ingredients', '').strip()
+
+    local_results = []
+    external_results = []
+
+    if q:
+        # search by recipe title or ingredients in local DB
+        q_like = f"%{q}%"
+        local_results = Recipe.query.filter(
+            (Recipe.title.ilike(q_like)) | (Recipe.ingredients.ilike(q_like))
+        ).all()
+
+    if ingredients:
+        # search local DB for any recipe that contains all provided ingredients (comma-separated)
+        needed = [i.strip().lower() for i in ingredients.split(',') if i.strip()]
+        if needed:
+            # naive approach: filter by ingredients text containing each ingredient
+            query = Recipe.query
+            for ing in needed:
+                query = query.filter(Recipe.ingredients.ilike(f"%{ing}%"))
+            local_ing_results = query.all()
+            # merge unique
+            for r in local_ing_results:
+                if r not in local_results:
+                    local_results.append(r)
+
+    # external results removed — local-only search
+
+    return render_template('search_results.html', q=q, ingredients=ingredients, local_results=local_results, external_results=external_results)
 
 @app.route("/favorites")
 @login_required

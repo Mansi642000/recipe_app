@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Search results</h2>
+  {% if q %}
+    <p>Query: <strong>{{ q }}</strong></p>
+  {% endif %}
+  {% if ingredients %}
+    <p>Ingredients: <strong>{{ ingredients }}</strong></p>
+  {% endif %}
+
+  <div class="row g-3">
+    {% if local_results %}
+      {% for r in local_results %}
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card">
+            {% if r.image_url %}
+              <img src="{{ r.image_url }}" class="card-img-top img-fluid" alt="{{ r.title }}">
+            {% endif %}
+            <div class="card-body">
+              <h5 class="card-title"><a href="{{ url_for('recipe_detail', recipe_id=r.id) }}">{{ r.title }}</a></h5>
+              <p class="card-text small text-muted">by {{ r.user.username }}</p>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-info">No matching recipes found.</div>
+      </div>
+    {% endif %}
+  </div>
+
+{% endblock %}

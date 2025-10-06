@@ -1,18 +1,60 @@
 {% extends "base.html" %}
 {% block content %}
-  <h2>All Recipes</h2>
-  <a href="{{ url_for('add_recipe') }}">➕ Add New Recipe</a>
-  <ul>
-    {% for recipe in recipes %}
-      <li>
-        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">{{ recipe.title }}</a>
-        {% if recipe.user_id == current_user.id %}
-          | <a href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}">Edit</a>
-          <form action="{{ url_for('delete_recipe', recipe_id=recipe.id) }}" method="POST" style="display:inline;">
-            <button type="submit">Delete</button>
-          </form>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
+  <div class="hero hero--recipes">
+    <div class="container overlay">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">All Recipes</h2>
+        <p class="mb-0"><a class="btn btn-sm btn-success" href="{{ url_for('add_recipe') }}">➕ Add New Recipe</a></p>
+      </div>
+
+      <form action="{{ url_for('search') }}" method="get" class="row g-2 mb-3">
+        <div class="col-auto">
+          <input type="text" name="q" class="form-control" placeholder="Search by name" value="{{ request.args.get('q','') }}">
+        </div>
+        <div class="col-auto">
+          <input type="text" name="ingredients" class="form-control" placeholder="Search by comma-separated ingredients" value="{{ request.args.get('ingredients','') }}">
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-primary">Search</button>
+        </div>
+      </form>
+
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+        {% for recipe in recipes %}
+          <div class="col d-flex">
+            <div class="card card-recipe h-100 w-100">
+              {% if recipe.image_url %}
+                <div style="height:140px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                  <img src="{{ recipe.image_url }}" class="img-fluid" alt="{{ recipe.title }}">
+                </div>
+              {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center" style="height:140px;">No image</div>
+              {% endif %}
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title mb-1">{{ recipe.title }}</h5>
+                <p class="text-muted small mb-2">by {{ recipe.user.username if recipe.user else 'Unknown' }}</p>
+                <p class="card-text text-truncate mb-2">{{ recipe.description or recipe.instructions[:120] }}</p>
+                <div class="mt-auto d-flex justify-content-between align-items-center">
+                  <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-sm btn-primary">View</a>
+                  {% if current_user.is_authenticated %}
+                    <form action="{{ url_for('favorite_recipe', recipe_id=recipe.id) }}" method="post" class="d-inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      {% if recipe.favorited_by|selectattr('user_id','equalto', current_user.id)|list %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">♥ Unfav</button>
+                      {% else %}
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">♡ Fav</button>
+                      {% endif %}
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="card-footer bg-white">
+                <small class="text-muted">Calories: {{ '%.2f'|format(recipe.calories or 0) }}</small>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
 {% endblock %}

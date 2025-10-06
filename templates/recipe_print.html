@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+  <div style="max-width:800px; margin:0 auto; font-family:Arial, sans-serif; color:#222;">
+    <h1>{{ recipe.title }}</h1>
+    {% if recipe.image_url %}
+      <div><img src="{{ recipe.image_url }}" alt="{{ recipe.title }}" style="max-width:100%; height:auto;"/></div>
+    {% endif %}
+
+    <h3>Ingredients</h3>
+    <p style="white-space:pre-wrap;">{{ recipe.ingredients }}</p>
+
+    <h3>Instructions</h3>
+    <p style="white-space:pre-wrap;">{{ recipe.instructions }}</p>
+
+    <h3>Nutritional Summary</h3>
+    <ul>
+  <li>Calories: {{ '%.2f'|format(recipe.calories or 0) }} kcal</li>
+  <li>Proteins: {{ '%.2f'|format(recipe.proteins or 0) }} g</li>
+  <li>Fats: {{ '%.2f'|format(recipe.fats or 0) }} g</li>
+  <li>Carbs: {{ '%.2f'|format(recipe.carbs or 0) }} g</li>
+  <li>Fibers: {{ '%.2f'|format(recipe.fibers or 0) }} g</li>
+    </ul>
+
+    {% if recipe.youtube_url %}
+      <p>Video: {{ recipe.youtube_url }}</p>
+    {% endif %}
+
+    <hr>
+    <p style="font-size:0.9rem; color:#666;">Exported from Recipe App</p>
+  </div>
+{% endblock %}

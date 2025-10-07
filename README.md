@@ -8,7 +8,6 @@ Features
  - Nutrition calculation (local utility module)
  - Favorites, ratings, and comments
  - Local search by title and ingredients
- - Export recipes to PDF (attempts WeasyPrint → pdfkit/wkhtmltopdf → print-friendly HTML)
  - Responsive UI using Bootstrap and a custom SyNutrify theme
 
 
@@ -51,16 +50,6 @@ Important notes
 - Image uploads: Uploaded files are saved under `static/uploads/`. Templates use `recipe.image_url` (either static URL or external URL).
 - Background images: The app serves the repository `images/` folder via a `/images/<file>` route. Confirm `images/bg1.jpg`, `bg2.jpg`, `lrbg.jpg`, and `allrbg.jpg` exist if you rely on hero backgrounds.
 
-
-PDF export
-- The app supports server-side PDF generation using either WeasyPrint or wkhtmltopdf (via `pdfkit`). Both require native binaries/libraries on the host machine.
-- If both methods are unavailable the app falls back to a print-friendly HTML page and you can use your browser's Print → Save as PDF feature.
-
-Windows tips for PDF (optional)
-- WeasyPrint: requires libraries like Cairo/GTK; installation on Windows can be more involved. See https://weasyprint.org/
-- wkhtmltopdf: download the Windows installer from https://wkhtmltopdf.org/downloads.html and add it to PATH or set `WKHTMLTOPDF_PATH` environment variable.
-
-
 Security
 - CSRF protection is enabled via Flask-WTF. Forms include hidden CSRF tokens.
 - Authentication is via Flask-Login. Only recipe owners may edit or delete recipes.
@@ -79,11 +68,4 @@ Development notes & next steps
 
 Contributing
 - Open a PR with a clear description and test instructions. If adding native dependencies (e.g., for PDF), include setup notes for Windows.
-
-
-License
-- MIT (or choose your preferred license)
-
-
-Enjoy — tell me if you want a CONTRIBUTING.md or automated tests added.
 

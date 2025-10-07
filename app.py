@@ -361,15 +361,14 @@ def edit_recipe(recipe_id):
                 recipe.calories = round(nutrition_totals.get("calories", 0), 2)
         else:
             recipe.calories = round(nutrition_totals.get("calories", 0), 2)
-    recipe.proteins = round(nutrition_totals.get("proteins", 0), 2)
-    recipe.fats = round(nutrition_totals.get("fats", 0), 2)
-    recipe.carbs = round(nutrition_totals.get("carbs", 0), 2)
-    recipe.fibers = round(nutrition_totals.get("fibers", 0), 2)
+        recipe.proteins = round(nutrition_totals.get("proteins", 0), 2)
+        recipe.fats = round(nutrition_totals.get("fats", 0), 2)
+        recipe.carbs = round(nutrition_totals.get("carbs", 0), 2)
+        recipe.fibers = round(nutrition_totals.get("fibers", 0), 2)
 
     db.session.commit()
     flash("Recipe updated with new nutrition info!", "success")
     return redirect(url_for("recipe_detail", recipe_id=recipe.id))
-
     return render_template("add_recipe.html", form=form, edit=True)
 
 

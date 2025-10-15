@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for, flash, request ,jsonify
+from flask import Flask, render_template, redirect, url_for,make_response, flash, request ,jsonify
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
@@ -14,6 +14,8 @@ from werkzeug.utils import secure_filename
 from uuid import uuid4
 from urllib.parse import urlencode
 import shutil
+
+ 
 # ...existing code... (removed FileField import since we use image URL instead)
 # --- App setup ---
 app = Flask(__name__)
@@ -216,50 +218,47 @@ def recipe_detail(recipe_id):
     )
 
 
+
+
+ 
+os.environ['WKHTMLTOPDF_PATH'] = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
 @app.route('/recipe/<int:recipe_id>/export')
 @login_required
 def export_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    # try to use WeasyPrint if installed
-    # 1) try WeasyPrint
+    html = render_template('recipe_print.html', recipe=recipe)
+
+    # --- Try WeasyPrint ---
     try:
         from weasyprint import HTML
-        html = render_template('recipe_print.html', recipe=recipe)
         pdf = HTML(string=html).write_pdf()
-        return (pdf, 200, {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': f'attachment; filename=recipe_{recipe.id}.pdf'
-        })
-    except Exception:
-        app.logger.info('WeasyPrint not available or failed, trying pdfkit/wkhtmltopdf...')
+    except Exception as e:
+        app.logger.warning(f"WeasyPrint failed: {e}")
+        pdf = None
 
-    # 2) try pdfkit + wkhtmltopdf
-    try:
-        import pdfkit
-        html = render_template('recipe_print.html', recipe=recipe)
-        # Look for an explicit env var first, then try to find wkhtmltopdf on PATH
-        wk_path = os.getenv('WKHTMLTOPDF_PATH') or shutil.which('wkhtmltopdf')
-        if wk_path:
-            try:
-                config = pdfkit.configuration(wkhtmltopdf=wk_path)
-                pdf = pdfkit.from_string(html, False, configuration=config)
-            except Exception:
-                app.logger.exception('pdfkit failed using wkhtmltopdf at %s', wk_path)
-                # try without explicit configuration (let pdfkit try PATH)
-                pdf = pdfkit.from_string(html, False)
-        else:
-            # Let pdfkit try to find wkhtmltopdf on PATH; will raise if not found
-            pdf = pdfkit.from_string(html, False)
-        return (pdf, 200, {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': f'attachment; filename=recipe_{recipe.id}.pdf'
-        })
-    except Exception:
-        app.logger.info('pdfkit/wkhtmltopdf not available or failed; falling back to HTML')
+    # --- Try pdfkit if WeasyPrint fails ---
+    if pdf is None:
+        try:
+            import pdfkit
+            wk_path = os.getenv('WKHTMLTOPDF_PATH') or shutil.which('wkhtmltopdf')
+            config = pdfkit.configuration(wkhtmltopdf=wk_path) if wk_path else None
+            pdf = pdfkit.from_string(html, False, configuration=config)
+        except Exception as e:
+            app.logger.warning(f"pdfkit failed: {e}")
+            pdf = None
 
-    # fallback: render print-friendly HTML and instruct user to print to PDF
-    flash('PDF export not available (weasyprint/wkhtmltopdf missing). Showing print-friendly page — use your browser Print -> Save as PDF.', 'warning')
-    return render_template('recipe_print.html', recipe=recipe)
+    # --- Return PDF if generated ---
+    if pdf:
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=recipe_{recipe.id}.pdf'
+        return response
+
+    # --- Fallback ---
+    flash("PDF export not available. Use Print → Save as PDF.", "warning")
+    return render_template("recipe_print.html", recipe=recipe)
+
+
 
 
 @app.route("/recipe/new", methods=["GET", "POST"])
@@ -330,8 +329,8 @@ def calculate_nutrition():
 @app.route("/recipe/<int:recipe_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_recipe(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
-    if recipe.user_id != current_user.id:
+    recipe = db.session.get(Recipe, recipe_id)
+    if recipe is None or recipe.user_id != current_user.id:
         flash("You cannot edit this recipe!", "danger")
         return redirect(url_for("recipes"))
     form = RecipeForm(obj=recipe)
@@ -351,7 +350,6 @@ def edit_recipe(recipe_id):
             recipe.image_url = form.image_url.data
         recipe.youtube_url = form.youtube_url.data
         ingredients_list = [i.strip() for i in form.ingredients.data.split(',')]
-        from nutrition_calculator.nutrition_utils import calculate_recipe_nutrition
         nutrition_totals = calculate_recipe_nutrition(ingredients_list)
         # If user provided a manual calories override, use it
         if form.calories.data and str(form.calories.data).strip():
@@ -361,17 +359,15 @@ def edit_recipe(recipe_id):
                 recipe.calories = round(nutrition_totals.get("calories", 0), 2)
         else:
             recipe.calories = round(nutrition_totals.get("calories", 0), 2)
-        recipe.proteins = round(nutrition_totals.get("proteins", 0), 2)
-        recipe.fats = round(nutrition_totals.get("fats", 0), 2)
-        recipe.carbs = round(nutrition_totals.get("carbs", 0), 2)
-        recipe.fibers = round(nutrition_totals.get("fibers", 0), 2)
-
-    db.session.commit()
-    flash("Recipe updated with new nutrition info!", "success")
-    return redirect(url_for("recipe_detail", recipe_id=recipe.id))
-    return render_template("add_recipe.html", form=form, edit=True)
-
-
+            recipe.proteins = round(nutrition_totals.get("proteins", 0), 2)
+            recipe.fats = round(nutrition_totals.get("fats", 0), 2)
+            recipe.carbs = round(nutrition_totals.get("carbs", 0), 2)
+            recipe.fibers = round(nutrition_totals.get("fibers", 0), 2)
+        db.session.commit()
+        flash("Recipe updated with new nutrition info!", "success")
+        return redirect(url_for("recipe_detail", recipe_id=recipe.id))
+    else :
+        return render_template("add_recipe.html", form=form, edit=True)
 @app.route("/recipe/<int:recipe_id>/delete", methods=["POST"])
 @login_required
 def delete_recipe(recipe_id):

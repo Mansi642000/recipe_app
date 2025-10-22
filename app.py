@@ -14,12 +14,19 @@ from werkzeug.utils import secure_filename
 from uuid import uuid4
 from urllib.parse import urlencode
 import shutil
-
+# Make csrf_token() available in all templates
+from flask_wtf.csrf import generate_csrf
  
 # ...existing code... (removed FileField import since we use image URL instead)
 # --- App setup ---
 app = Flask(__name__)
 app.config.from_object(Config)
+csrf=CSRFProtect(app)
+
+
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf_token=generate_csrf)
 
 # Serve images folder (project-level) at /images/
 @app.route('/images/<path:filename>')
@@ -215,12 +222,7 @@ def recipe_detail(recipe_id):
         rating_form=rating_form,
         comment_form=comment_form,
         is_favorite=is_favorite
-    )
-
-
-
-
- 
+    ) 
 os.environ['WKHTMLTOPDF_PATH'] = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
 @app.route('/recipe/<int:recipe_id>/export')
 @login_required
@@ -377,7 +379,7 @@ def delete_recipe(recipe_id):
         return redirect(url_for("recipes"))
     db.session.delete(recipe)
     db.session.commit()
-    flash("Recipe deleted.", "info")
+    flash("Recipe deleted successfully!.", "info")
     return redirect(url_for("recipes"))
 
 

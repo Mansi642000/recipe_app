@@ -33,7 +33,7 @@ Getting started (Windows)
 5. Open the app in your browser:
 
 	http://127.0.0.1:5000/
-
+	
 
 Project layout
 - `app.py` — application entrypoint and route definitions
@@ -49,6 +49,7 @@ Important notes
 - Database: The app creates `instance/site.db` automatically. Delete that file to reset the DB.
 - Image uploads: Uploaded files are saved under `static/uploads/`. Templates use `recipe.image_url` (either static URL or external URL).
 - Background images: The app serves the repository `images/` folder via a `/images/<file>` route. Confirm `images/bg1.jpg`, `bg2.jpg`, `lrbg.jpg`, and `allrbg.jpg` exist if you rely on hero backgrounds.
+- Dataset : The dataset used for calculating nutitional values is from Indian Nutrient Databank https://www.anuvaad.org.in/indian-nutrient-databank/
 
 Security
 - CSRF protection is enabled via Flask-WTF. Forms include hidden CSRF tokens.
@@ -64,8 +65,3 @@ Troubleshooting
 Development notes & next steps
 - Nutrition utilities are lazy-imported inside routes to keep startup fast (pandas is heavy).
 - Consider adding server-side image resizing, icons (Font Awesome), or unit tests (pytest) for the nutrition utilities.
-
-
-Contributing
-- Open a PR with a clear description and test instructions. If adding native dependencies (e.g., for PDF), include setup notes for Windows.
-

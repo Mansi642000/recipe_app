@@ -76,9 +76,9 @@ class Recipe(db.Model):
     instructions = db.Column(db.Text, nullable=False)
     youtube_url = db.Column(db.String(300))
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    ratings = db.relationship("Rating", backref="recipe", lazy=True)
-    comments = db.relationship("Comment", backref="recipe", lazy=True)
-
+    #Relatioship wit cascade delete
+    ratings = db.relationship("Rating", backref="recipe", lazy=True ,cascade="all, delete-orphan")
+    comments = db.relationship("Comment", backref="recipe", lazy=True , cascade="all, delete-orphan")
 
 class Rating(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -228,8 +228,14 @@ os.environ['WKHTMLTOPDF_PATH'] = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.
 @login_required
 def export_recipe(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
+    static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    static_dir_url = static_dir.replace("\\", "/")  # convert \ → /
     html = render_template('recipe_print.html', recipe=recipe)
-
+    # Replace relative /static/ paths with file:// absolute paths
+    html = html.replace(
+        '/static/',
+        f'file:///{static_dir_url}/'
+    )
     # --- Try WeasyPrint ---
     try:
         from weasyprint import HTML

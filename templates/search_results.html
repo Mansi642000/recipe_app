@@ -12,12 +12,16 @@
     {% if local_results %}
       {% for r in local_results %}
         <div class="col-12 col-md-6 col-lg-4">
-          <div class="card">
+          <div class="card card-recipe">
             {% if r.image_url %}
-              <img src="{{ r.image_url }}" class="card-img-top img-fluid" alt="{{ r.title }}">
+              <div class="image-wrapper">
+                <img src="{{ r.image_url }}" alt="{{ r.title }}">
+              </div>
             {% endif %}
-            <div class="card-body">
-              <h5 class="card-title"><a href="{{ url_for('recipe_detail', recipe_id=r.id) }}">{{ r.title }}</a></h5>
+            <div class="card-body text-center">
+              <h5 class="card-title">
+                <a href="{{ url_for('recipe_detail', recipe_id=r.id) }}">{{ r.title }}</a>
+              </h5>
               <p class="card-text small text-muted">by {{ r.user.username }}</p>
             </div>
           </div>

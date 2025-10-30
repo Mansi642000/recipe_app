@@ -345,7 +345,7 @@ def edit_recipe(recipe_id):
     if form.validate_on_submit():
 
         from nutrition_calculator.nutrition_utils import calculate_recipe_nutrition
-        
+
         recipe.title = form.title.data
         recipe.ingredients = form.ingredients.data
         recipe.instructions = form.instructions.data
@@ -474,14 +474,12 @@ def search():
     local_results = []
     external_results = []
 
-    if q:
+    if q and not ingredients:
         # search by recipe title or ingredients in local DB
         q_like = f"%{q}%"
-        local_results = Recipe.query.filter(
-            (Recipe.title.ilike(q_like)) | (Recipe.ingredients.ilike(q_like))
-        ).all()
+        local_results = Recipe.query.filter(Recipe.title.ilike(q_like)).all()
 
-    if ingredients:
+    elif ingredients and not q:
         # search local DB for any recipe that contains all provided ingredients (comma-separated)
         needed = [i.strip().lower() for i in ingredients.split(',') if i.strip()]
         if needed:
@@ -489,16 +487,25 @@ def search():
             query = Recipe.query
             for ing in needed:
                 query = query.filter(Recipe.ingredients.ilike(f"%{ing}%"))
-            local_ing_results = query.all()
-            # merge unique
-            for r in local_ing_results:
-                if r not in local_results:
-                    local_results.append(r)
+            local_results = query.all()
+            
+    # --- CASE 3: Both fields filled (optional behavior) ---
+    elif q and ingredients:
+        q_like = f"%{q}%"
+        query = Recipe.query.filter(Recipe.title.ilike(q_like))
+        needed = [i.strip().lower() for i in ingredients.split(',') if i.strip()]
+        for ing in needed:
+            query = query.filter(Recipe.ingredients.ilike(f"%{ing}%"))
+        local_results = query.all()
 
-    # external results removed — local-only search
-
-    return render_template('search_results.html', q=q, ingredients=ingredients, local_results=local_results, external_results=external_results)
-
+    return render_template(
+        'search_results.html',
+        q=q,
+        ingredients=ingredients,
+        local_results=local_results,
+        external_results=external_results
+    )
+    
 @app.route("/favorites")
 @login_required
 def favorites():

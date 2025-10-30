@@ -122,3 +122,46 @@ body {
 .card-recipe .card-title a:hover {
   text-decoration: underline;
 }
+/* === Add Recipe Page Styling === */
+.add-recipe-container {
+  background: url('/images/lrbg.jpg') no-repeat center center/cover;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 0;
+}
+
+.recipe-card {
+  background-color: rgba(255, 255, 255, 0.92);
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  max-width: 650px;
+  width: 90%;
+  backdrop-filter: blur(6px);
+}
+
+.form-heading {
+  font-weight: 700;
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.btn-primary, .btn-success {
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-weight: 600;
+}
+
+.nutrition-box {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f9faff;
+  padding: 10px 15px;
+}

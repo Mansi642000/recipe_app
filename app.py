@@ -343,6 +343,9 @@ def edit_recipe(recipe_id):
         return redirect(url_for("recipes"))
     form = RecipeForm(obj=recipe)
     if form.validate_on_submit():
+
+        from nutrition_calculator.nutrition_utils import calculate_recipe_nutrition
+        
         recipe.title = form.title.data
         recipe.ingredients = form.ingredients.data
         recipe.instructions = form.instructions.data

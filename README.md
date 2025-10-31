@@ -2,6 +2,8 @@
 
 Lightweight Flask recipe manager with nutrition calculation, image uploads, favorites, ratings, and PDF export support.
 
+ **Live Demo:** https://recipe-app-m833.onrender.com
+
 Features
  - Add, edit, and delete recipes (owners only)
  - Upload local images or use external image URLs
@@ -10,8 +12,19 @@ Features
  - Local search by title and ingredients
  - Responsive UI using Bootstrap and a custom SyNutrify theme
 
+Tech Stack  
+
+| Layer | Technology |
+|-------|-------------|
+| **Backend** | Flask, Flask-RESTful, Flask-Login, Flask-WTF |
+| **Database** | SQLite (based on config) |
+| **Frontend** | HTML5, CSS3, Bootstrap |
+| **Data & ML** | Pandas, NumPy, Scikit-learn |
+| **Deployment** | Render (Gunicorn + Flask) |
+
 
 Getting started (Windows)
+
 1. Open a cmd.exe and navigate to the project folder:
 
 	cd C:\\path\\to\\recipe_app
@@ -33,7 +46,6 @@ Getting started (Windows)
 5. Open the app in your browser:
 
 	http://127.0.0.1:5000/
-	
 
 Project layout
 - `app.py` — application entrypoint and route definitions
@@ -44,12 +56,26 @@ Project layout
 - `instance/site.db` — SQLite DB (auto-created)
 - `images/` — repo-level backgrounds (served at `/images/<file>`)
 
+Deployment on Render
+
+- Push your code to GitHub
+- Add a file named Procfile to the project root:
+		
+		web: gunicorn app:app
+
+- Go to Render → New Web Service → Connect GitHub Repo
+- Set:
+	Environment: Python 3.9+
+	Start Command: gunicorn app:app
+- Add any necessary environment variables (like MONGO_URI if used)
+- Deploy
 
 Important notes
 - Database: The app creates `instance/site.db` automatically. Delete that file to reset the DB.
 - Image uploads: Uploaded files are saved under `static/uploads/`. Templates use `recipe.image_url` (either static URL or external URL).
 - Background images: The app serves the repository `images/` folder via a `/images/<file>` route. Confirm `images/bg1.jpg`, `bg2.jpg`, `lrbg.jpg`, and `allrbg.jpg` exist if you rely on hero backgrounds.
 - Dataset : The dataset used for calculating nutitional values is from Indian Nutrient Databank https://www.anuvaad.org.in/indian-nutrient-databank/
+- Deployment : The website is deployed on Render(Gunicorn +Flask)
 
 Security
 - CSRF protection is enabled via Flask-WTF. Forms include hidden CSRF tokens.
@@ -60,6 +86,9 @@ Troubleshooting
 - ModuleNotFoundError: ensure your venv is active and `pip install -r requirements.txt` completed.
 - Missing background images: open `http://127.0.0.1:5000/images/bg1.jpg` to confirm the server serves the files.
 - PDF export fails: check the server log for WeasyPrint or wkhtmltopdf errors; fallback HTML will still be shown.
+
+Live Demo 
+https://recipe-app-m833.onrender.com
 
 
 Development notes & next steps

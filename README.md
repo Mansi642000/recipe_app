@@ -87,10 +87,6 @@ Troubleshooting
 - Missing background images: open `http://127.0.0.1:5000/images/bg1.jpg` to confirm the server serves the files.
 - PDF export fails: check the server log for WeasyPrint or wkhtmltopdf errors; fallback HTML will still be shown.
 
-Live Demo 
-https://recipe-app-m833.onrender.com
-
-
 Development notes & next steps
 - Nutrition utilities are lazy-imported inside routes to keep startup fast (pandas is heavy).
 - Consider adding server-side image resizing, icons (Font Awesome), or unit tests (pytest) for the nutrition utilities.

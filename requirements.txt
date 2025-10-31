@@ -15,6 +15,7 @@ Flask-PyMongo==3.0.1
 Flask-RESTful==0.3.10
 Flask-WTF==1.2.2
 fuzzywuzzy==0.18.0
+Flask-SQLAlchemy==3.1.1
 gunicorn==23.0.0
 idna==3.10
 itsdangerous==2.2.0

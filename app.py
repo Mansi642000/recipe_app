@@ -519,6 +519,9 @@ def my_recipes():
     user_recipes = Recipe.query.filter_by(user_id=current_user.id).all()
     return render_template("my_recipes.html", recipes=user_recipes)
 
+# Create tables if they don't exist
+with app.app_context():
+    db.create_all()
 
 if __name__ == "__main__":
     os.makedirs(os.path.join(os.path.dirname(__file__), "instance"), exist_ok=True)

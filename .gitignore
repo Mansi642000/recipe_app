@@ -3,3 +3,4 @@ instance/site.db
 venv/
 __pycache__/
 *.pyc
+.env.render

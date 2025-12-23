@@ -337,7 +337,7 @@ def calculate_nutrition():
 @app.route("/recipe/<int:recipe_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_recipe(recipe_id):
-    recipe = db.session.get(Recipe, recipe_id)
+    recipe = Recipe.query.get_or_404(recipe_id)
     if recipe is None or recipe.user_id != current_user.id:
         flash("You cannot edit this recipe!", "danger")
         return redirect(url_for("recipes"))
@@ -378,7 +378,8 @@ def edit_recipe(recipe_id):
         flash("Recipe updated with new nutrition info!", "success")
         return redirect(url_for("recipe_detail", recipe_id=recipe.id))
     else :
-        return render_template("add_recipe.html", form=form, edit=True)
+        return render_template("add_recipe.html", form=form, edit=True, recipe=recipe)
+
 @app.route("/recipe/<int:recipe_id>/delete", methods=["POST"])
 @login_required
 def delete_recipe(recipe_id):

@@ -1,83 +1,131 @@
+import os
 import pandas as pd
 import difflib
 
-# Load and clean dataset
-df = pd.read_csv("./dataset/indb.csv")
+# === Locate dataset ===
+# Works with either ./dataset/indb_clean.csv or ./dataset/indb.csv
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # project root
+DATASET_DIR = os.path.join(BASE_DIR, "dataset")
 
-# Drop any empty or unnamed columns
+clean_path = os.path.join(DATASET_DIR, "indb_clean.csv")
+raw_path = os.path.join(DATASET_DIR, "indb.csv")
+
+if os.path.exists(clean_path):
+    dataset_path = clean_path
+elif os.path.exists(raw_path):
+    dataset_path = raw_path
+else:
+    raise FileNotFoundError("❌ No dataset found — please place indb.csv in the dataset folder.")
+
+# === Load and Clean Dataset ===
+df = pd.read_csv(dataset_path)
 df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+df.fillna(0, inplace=True)
 
-# Rename to standardized columns (only if they exist)
+# Keep only relevant nutrient columns
+keep_cols = [
+    "food_name",
+    "unit_serving_energy_kcal",
+    "unit_serving_carb_g",
+    "unit_serving_protein_g",
+    "unit_serving_fat_g",
+    "unit_serving_fibre_g"
+]
+df = df[[c for c in keep_cols if c in df.columns]].copy()
+
+# Rename to app-standard names
 rename_map = {
-    "fibre_g": "fibers",
     "unit_serving_energy_kcal": "calories",
     "unit_serving_carb_g": "carbs",
     "unit_serving_protein_g": "proteins",
     "unit_serving_fat_g": "fats",
     "unit_serving_fibre_g": "fibers"
 }
-df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns}, inplace=True)
+df.rename(columns=rename_map, inplace=True)
 
-# Clean all nutrient columns (convert to float safely)
-for col in df.columns:
-    if col != "food_name" and pd.api.types.is_object_dtype(df[col]):
-        try:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-        except Exception:
-            df[col] = 0
+# Normalize
+df["food_name"] = df["food_name"].astype(str).str.lower()
+df = df.fillna(0)
 
-# Ensure food_name is lowercase text
-if "food_name" in df.columns:
-    df["food_name"] = df["food_name"].astype(str).str.lower()
-else:
-    raise ValueError("❌ 'food_name' column missing in dataset")
+# Clamp unrealistic per-serving values
+df["calories"] = df.get("calories", 0).clip(0, 800)
+df["proteins"] = df.get("proteins", 0).clip(0, 80)
+df["fats"] = df.get("fats", 0).clip(0, 100)
+df["carbs"] = df.get("carbs", 0).clip(0, 120)
+df["fibers"] = df.get("fibers", 0).clip(0, 25)
 
-# Common plural to singular corrections
-plural_map = {
-    "tomatoes": "tomato",
-    "potatoes": "potato",
-    "berries": "berry",
-    "carrots": "carrot",
-    "onions": "onion",
-    "apples": "apple",
-}
+major_nutrients = ["calories", "proteins", "fats", "carbs", "fibers"]
 
-# Major nutrients we care about
-major_nutrients = ['calories', 'proteins', 'fats', 'carbs', 'fibers']
 
-def get_nutrition(food_query):
-    # Normalize the query
+# === Core Functions ===
+def get_nutrition(food_query: str):
+    """Return nutrition data for one ingredient (per serving)."""
+    if not food_query or not isinstance(food_query, str):
+        return {k: 0.0 for k in major_nutrients}
+
     food_query = food_query.strip().lower()
-    food_query = plural_map.get(food_query, food_query)
+    if not food_query:
+        return {k: 0.0 for k in major_nutrients}
 
-    # Fuzzy match to find closest food name
-    food_names = df['food_name'].str.lower()
+    # Fuzzy match with tolerance
+    food_names = df["food_name"].tolist()
     matches = difflib.get_close_matches(food_query, food_names, n=1, cutoff=0.6)
 
     if not matches:
-        # No match found
         return {k: 0.0 for k in major_nutrients}
 
-    # Get the first matching row
-    row = df[food_names == matches[0]].iloc[0]
+    row = df[df["food_name"] == matches[0]].iloc[0]
+    return {k: float(row[k]) if k in row else 0.0 for k in major_nutrients}
 
-    nutrition = {}
-    for col in major_nutrients:
-        try:
-            value = row[col]
-            if isinstance(value, pd.Series):
-                value = value.iloc[0]
-            nutrition[col] = float(value) if pd.notnull(value) else 0.0
-        except Exception:
-            nutrition[col] = 0.0
-
-    return nutrition
 
 def calculate_recipe_nutrition(ingredients_list):
-    # Only sum major nutrients
+    """
+    Calculate total nutrition for a list of ingredients.
+    Adjusts nutrients based on realistic serving weights.
+    """
+
+    # Average realistic portion weights (grams)
+    portion_weights = {
+        "poha": 80,
+        "rice": 100,
+        "bread": 30,              # per slice
+        "butter": 5,              # per tsp
+        "chutney": 15,            # per tbsp
+        "cucumber": 50,
+        "tomato": 50,
+        "onion": 40,
+        "capsicum": 40,
+        "potato": 60,
+        "oil": 5,                 # per tsp
+        "peas": 50,
+        "carrot": 50,
+        "lemon": 10,
+        "peanuts": 15,
+        "egg": 50,
+        "milk": 100,
+        "sugar": 5,
+    }
+
     totals = {k: 0.0 for k in major_nutrients}
-    for ing in ingredients_list:
-        nutrition = get_nutrition(ing)
+
+    for ingredient in ingredients_list:
+        if not ingredient.strip():
+            continue
+
+        nutrition = get_nutrition(ingredient)
+        if not nutrition:
+            continue
+
+        # Find a portion weight if available
+        portion = 100  # default: 100 g
+        for key in portion_weights:
+            if key in ingredient.lower():
+                portion = portion_weights[key]
+                break
+
+        # Scale nutrients relative to 100 g
+        scale = portion / 100.0
         for k in major_nutrients:
-            totals[k] += nutrition.get(k, 0.0)
-    return totals
+            totals[k] += nutrition.get(k, 0.0) * scale
+
+    return {k: round(v, 2) for k, v in totals.items()}

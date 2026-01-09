@@ -90,3 +90,73 @@ Troubleshooting
 Development notes & next steps
 - Nutrition utilities are lazy-imported inside routes to keep startup fast (pandas is heavy).
 - Consider adding server-side image resizing, icons (Font Awesome), or unit tests (pytest) for the nutrition utilities.
+## 📸 Screenshots
+
+Below are some screenshots showcasing the core features and user flow of **SyNutrify – Smart Recipe Finder**.
+
+### 🏠 Home Page
+Displays the landing page where users can explore the platform and navigate to different features.  
+![Home Page](screenshots/home.png)
+
+---
+
+### 🔐 User Authentication
+Secure authentication system allowing users to register and log in.
+
+**Register Page**  
+![Register](screenshots/register.png)
+
+**Login Page**  
+![Login](screenshots/login.png)
+
+---
+
+### 🔍 Search Recipes
+Users can search recipes based on ingredients and view matching results.  
+![Search Results](screenshots/search_results.png)
+
+---
+
+### 📋 All Recipes
+Displays a list of all available recipes in the system.  
+![All Recipes](screenshots/all_recipes.png)
+
+---
+
+### ➕ Add New Recipe
+Users can add their own recipes with ingredients and details.
+
+**Add Recipe – Step 1**  
+![Add Recipe Step 1](screenshots/add_recipe1.png)
+
+**Add Recipe – Step 2**  
+![Add Recipe Step 2](screenshots/add_recipe2.png)
+
+**Add Recipes Page**  
+![Add Recipes](screenshots/add_recipes.png)
+
+---
+
+### ✅ Recipe Added Successfully
+Confirmation screens shown after a recipe is successfully added.
+
+![Recipe Added](screenshots/recipe_added.png)  
+![Recipe Added Confirmation](screenshots/recipe_added2.png)
+
+---
+
+### ❤️ Favorites
+Users can mark recipes as favorites for quick access later.  
+![Favorites](screenshots/fav.png)
+
+---
+
+### 📁 My Recipes
+Shows recipes added by the logged-in user.  
+![My Recipes](screenshots/my_recipes.png)
+
+---
+
+### 🆕 New Recipe Page
+Dedicated page for creating a new recipe.  
+![New Recipe](screenshots/new_recipe.png)
